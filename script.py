@@ -44,10 +44,17 @@ def send_telegram_msg(chat_id, message, show_buttons=True):
 
 def fetch_meter_data(meter_no):
     api_url = f"https://api.brebprepaidportal.com/breb-customer/cust/basicElecConsumInfo?meterNo={meter_no}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     try:
-        res = requests.get(api_url, timeout=15)
+        res = requests.get(api_url, headers=headers, timeout=15)
         if res.status_code == 200:
-            return res.json()
+            json_res = res.json()
+            # API response contains data inside 'data' key
+            return json_res.get('data', {})
+        else:
+            print(f"API Error for meter {meter_no}: Status {res.status_code}")
     except Exception as e:
         print(f"Error fetching meter {meter_no}:", e)
     return None
@@ -149,17 +156,20 @@ def send_daily_reports():
         for meter_no in meters:
             data = fetch_meter_data(meter_no)
             if data:
-                balance = float(data.get('remBalance', 0))
-                used = data.get('usedThisMonth', 'N/A')
+                balance = float(data.get('remainingBalance', 0))
+                used_unit = data.get('usedThisMonthUnit', 'N/A')
+                used_taka = data.get('usedThisMonthTaka', 'N/A')
                 r_time = data.get('readingTime', 'N/A')
+                last_recharge = data.get('lastRecharge', 'N/A')
 
-                msg += f"\n📍 *মিটার:* `{meter_no}`\n"
+                msg += f"📍 *মিটার:* `{meter_no}`\n"
                 msg += f"💰 *অবশিষ্ট ব্যালেন্স:* *{balance} টাকা*\n"
-                msg += f"📊 *এই মাসে ব্যবহার:* {used} kWh\n"
+                msg += f"📊 *এই মাসে ব্যবহার:* {used_unit} kWh ({used_taka} টাকা)\n"
+                msg += f"💳 *শেষ রিচার্জ:* {last_recharge} টাকা\n"
                 msg += f"🕒 *রিডিং সময়:* {r_time}\n"
 
                 if balance < 200:
-                    msg += "⚠️ *জরুরি সতর্কতা: ব্যালেন্স ২০০ টাকার নিচে! রিচার্জ করুন।*\n"
+                    msg += "\n⚠️ *জরুরি সতর্কতা: ব্যালেন্স ২০০ টাকার নিচে! দ্রুত রিচার্জ করুন।*\n"
                 msg += "───────────────────\n"
 
         send_telegram_msg(chat_id, msg)
