@@ -1,0 +1,28 @@
+name: BREB Multi-User Alert System
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # প্রতিদিন সকাল ৮:০০ টায় স্বয়ংক্রিয়ভাবে মেসেজ পাঠাবে
+  workflow_dispatch: # ম্যানুয়ালি যেকোনো সময় রান করার জন্য
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Script
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        run: python script.py
